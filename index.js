@@ -1,36 +1,64 @@
-require("dotenv").config();
+const jwt = require("jsonwebtoken");
+const config = require("./config");
+const rp = require("request-promise");
 const express = require("express");
-const crypto = require("crypto");
-const cors = require("cors");
-
 const app = express();
-const port = process.env.PORT || 4000;
 
+app.use(express.urlencoded({ extended: true }));
+app.use(express.static("public"));
+app.use((req, res, next) => {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader(
+    "Access-Control-Allow-Headers",
+    "Origin, X-Requested-With, Content-Type, Accept, Authorization"
+  );
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, PATCH, DELETE");
+  next();
+});
 app.use(express.json());
-app.use(cors());
-app.options("*", cors());
+var email, userid, resp;
+const port = 4000;
+const payload = {
+  iss: config.APIKey,
+  exp: new Date().getTime() + 5000,
+};
+const token = jwt.sign(payload, config.APISecret);
 
-app.post("/", (req, res) => {
-  const timestamp = new Date().getTime() - 30000;
-  const msg = Buffer.from(
-    process.env.ZOOM_JWT_API_KEY +
-      req.body.meetingNumber +
-      timestamp +
-      req.body.role
-  ).toString("base64");
-  const hash = crypto
-    .createHmac("sha256", process.env.ZOOM_JWT_API_SECRET)
-    .update(msg)
-    .digest("base64");
-  const signature = Buffer.from(
-    `${process.env.ZOOM_JWT_API_KEY}.${req.body.meetingNumber}.${timestamp}.${req.body.role}.${hash}`
-  ).toString("base64");
+app.post("/newMeeting", (req, res) => {
+  console.log(req.body);
+  // email = "vinurachan@gmail.com";
+  email = "184024H@uom.lk";
+  var options = {
+    method: "POST",
+    uri: "https://api.zoom.us/v2/users/" + email + "/meetings",
+    body: {
+      topic: req.body.topic,
+      type: 1,
+      settings: {
+        host_video: "true",
+        participant_video: "true",
+      },
+    },
+    auth: {
+      bearer: token,
+    },
+    headers: {
+      "User-Agent": "Zoom-api-Jwt-Request",
+      "content-type": "application/json",
+    },
+    json: true,
+  };
 
-  res.json({
-    signature: signature,
-  });
+  rp(options)
+    .then(function (response) {
+      res.status(200).json({
+        status: "Successfull",
+        Meeting_Details: response,
+      });
+    })
+    .catch(function (err) {
+      console.log("Meeting Link Generation Failed!, reason- ", err);
+    });
 });
 
-app.listen(port, () =>
-  console.log(`zoom-signature-server running on port ${port}!`)
-);
+app.listen(port, () => console.log(`Zoom Server listening on Port: ${port}`));
