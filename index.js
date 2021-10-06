@@ -25,9 +25,8 @@ const payload = {
 const token = jwt.sign(payload, config.APISecret);
 
 app.post("/newMeeting", (req, res) => {
-  console.log(req.body);
-  // email = "vinurachan@gmail.com";
-  email = "184024H@uom.lk";
+  email = "vinurachan@gmail.com";
+  // email = "184024H@uom.lk";
   var options = {
     method: "POST",
     uri: "https://api.zoom.us/v2/users/" + email + "/meetings",
@@ -55,6 +54,7 @@ app.post("/newMeeting", (req, res) => {
         status: "Successfull",
         Meeting_Details: response,
       });
+      console.log(response);
     })
     .catch(function (err) {
       console.log("Meeting Link Generation Failed!, reason- ", err);
