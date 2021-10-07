@@ -2,7 +2,7 @@
   "name": "omega_squad_tss_backend",
   "version": "1.0.0",
   "description": "Backend program for Timetable Scheduling System",
-  "main": "index.js",
+  "main": "App.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "nodemon server.js"
@@ -14,6 +14,7 @@
     "cors": "^2.8.5",
     "dotenv": "^8.2.0",
     "express": "^4.17.1",
+    "firebase": "^9.1.1",
     "jsonwebtoken": "^8.3.0",
     "request": "^2.87.0",
     "request-promise": "^4.2.2"
