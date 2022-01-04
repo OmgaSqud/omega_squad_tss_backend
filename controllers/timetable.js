@@ -1,4 +1,7 @@
 const {
+  query,
+  where,
+  getDocs,
   collection,
   doc,
   addDoc,
@@ -15,6 +18,25 @@ const payload = {
   exp: new Date().getTime() + 5000,
 };
 const token = jwt.sign(payload, config.APISecret);
+
+const nodemailer = require("nodemailer");
+const { google } = require("googleapis");
+
+const CLIENT_ID =
+  "568212379264-7brqds1rs0jgqjhdori4hbk881hcpk7p.apps.googleusercontent.com";
+const CLIENT_SECRET = "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";
+const REDIRECT_URI = "https://developers.google.com/oauthplayground";
+const REFRESH_TOKEN =
+  "1//04qa3oR4rjYGRCgYIARAAGAQSNwF-L9Ir53Yrim3kWegwT4HWJDNyKJRWaAU2ypmb-lB2ArkcFaYuV3uft89Om7A5zBg1OrTUxgg";
+
+const oAuth2Client = new google.auth.OAuth2(
+  CLIENT_ID,
+  CLIENT_SECRET,
+  REDIRECT_URI
+);
+oAuth2Client.setCredentials({ refresh_token: REFRESH_TOKEN });
+
+var joinURL = null;
 
 exports.createZoomLink = async (req, res, next) => {
   const slotID = req.body.slotID;
@@ -43,6 +65,7 @@ exports.createZoomLink = async (req, res, next) => {
 
   rp(options)
     .then(async function (response) {
+      joinURL = response.join_url;
       if (!req.body.isUpdate) {
         await addDoc(collection(db, "timeslots"), {
           dateTime: serverTimestamp(),
@@ -64,6 +87,22 @@ exports.createZoomLink = async (req, res, next) => {
           joinlink: response.join_url,
         });
       }
+
+      const q = query(
+        collection(db, "users"),
+        where("class", "==", req.body.class)
+      );
+      let emails = "";
+      const querySnapshot = await getDocs(q);
+      querySnapshot.forEach((doc) => {
+        let data = doc.data();
+        emails = emails.concat((emails == "" ? "" : ",") + data.email);
+      });
+
+      sendMail(emails)
+        .then((result) => console.log("Email sent...", result))
+        .catch((error) => console.log(error.message));
+
       res.status(200).json({
         status: "Successfull",
         Meeting_Details: response,
@@ -74,4 +113,90 @@ exports.createZoomLink = async (req, res, next) => {
     .catch(function (err) {
       console.log("Meeting Link Generation Failed!, reason- ", err);
     });
+
+  async function sendMail(emails) {
+    try {
+      const accessToken = await oAuth2Client.getAccessToken();
+
+      const transport = nodemailer.createTransport({
+        service: "gmail",
+        auth: {
+          type: "oAuth2",
+          user: "vinurachan@gmail.com",
+          clientId: CLIENT_ID,
+          clientSecret: CLIENT_SECRET,
+          refreshToken: REFRESH_TOKEN,
+          accessToken: accessToken,
+        },
+      });
+
+      const mailOptions = {
+        from: "Vinurachan ✔😜<vinurachan@gmail.com>",
+        to: emails,
+        subject: `Zoom Class for ${req.body.topic}`,
+        html: `<p>${
+          req.body.teacher
+        } is inviting you to the online zoom class for ${req.body.subject} on ${
+          req.body.day
+        }
+              period ${req.body.period} at ${req.body.startTime}${
+          req.body.period == 7 || req.body.period == 8 ? "PM" : "AM"
+        }.
+              You can join the session through the following link.</p><br>${joinURL}`,
+      };
+
+      const result = await transport.sendMail(mailOptions);
+      return result;
+    } catch (error) {
+      return error;
+    }
+  }
+};
+
+exports.notifyDelete = async (req, res, next) => {
+  const q = query(
+    collection(db, "users"),
+    where("class", "==", req.body.class)
+  );
+  let emails = "";
+  const querySnapshot = await getDocs(q);
+  querySnapshot.forEach((doc) => {
+    let data = doc.data();
+    emails = emails.concat((emails == "" ? "" : ",") + data.email);
+  });
+  try {
+    const accessToken = await oAuth2Client.getAccessToken();
+
+    const transport = nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        type: "oAuth2",
+        user: "vinurachan@gmail.com",
+        clientId: CLIENT_ID,
+        clientSecret: CLIENT_SECRET,
+        refreshToken: REFRESH_TOKEN,
+        accessToken: accessToken,
+      },
+    });
+
+    const mailOptions = {
+      from: "Vinurachan ✔😜<vinurachan@gmail.com>",
+      to: emails,
+      subject: `Zoom Class Cancellation Notice for ${req.body.topic}`,
+      html: `<p>The online zoom class for ${req.body.subject} scheduled on ${
+        req.body.day
+      } period ${req.body.period}
+               at ${req.body.startTime}${
+        req.body.period == 7 || req.body.period == 8 ? "PM" : "AM"
+      } to the class ${req.body.class} has been cancelled by ${req.body.teacher}
+                due to an unavoidable reason.</p>`,
+    };
+
+    const result = await transport.sendMail(mailOptions);
+    console.log(result);
+    return result;
+  } catch (error) {
+    console.log(error.message);
+    return error;
+  }
 };
