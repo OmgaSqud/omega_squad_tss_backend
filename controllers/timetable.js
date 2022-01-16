@@ -164,43 +164,39 @@ exports.notifyDelete = async (req, res, next) => {
     let data = doc.data();
     emails = emails.concat((emails == "" ? "" : ",") + data.email);
   });
-  res.status(200).json({
-    status: "Successfull",
-    emails,
-  });
-  // try {
-  //   const accessToken = await oAuth2Client.getAccessToken();
+  try {
+    const accessToken = await oAuth2Client.getAccessToken();
 
-  //   const transport = nodemailer.createTransport({
-  //     service: "gmail",
-  //     auth: {
-  //       type: "oAuth2",
-  //       user: "vinurachan@gmail.com",
-  //       clientId: CLIENT_ID,
-  //       clientSecret: CLIENT_SECRET,
-  //       refreshToken: REFRESH_TOKEN,
-  //       accessToken: accessToken,
-  //     },
-  //   });
+    const transport = nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        type: "oAuth2",
+        user: "vinurachan@gmail.com",
+        clientId: CLIENT_ID,
+        clientSecret: CLIENT_SECRET,
+        refreshToken: REFRESH_TOKEN,
+        accessToken: accessToken,
+      },
+    });
 
-  //   const mailOptions = {
-  //     from: "Vinurachan ✔😜<vinurachan@gmail.com>",
-  //     to: emails,
-  //     subject: `Zoom Class Cancellation Notice for ${req.body.topic}`,
-  //     html: `<p>The online zoom class for ${req.body.subject} scheduled on ${
-  //       req.body.day
-  //     } period ${req.body.period}
-  //              at ${req.body.startTime}${
-  //       req.body.period == 7 || req.body.period == 8 ? "PM" : "AM"
-  //     } to the class ${req.body.class} has been cancelled by ${req.body.teacher}
-  //               due to an unavoidable reason.</p>`,
-  //   };
+    const mailOptions = {
+      from: "Vinurachan ✔😜<vinurachan@gmail.com>",
+      to: emails,
+      subject: `Zoom Class Cancellation Notice for ${req.body.topic}`,
+      html: `<p>The online zoom class for ${req.body.subject} scheduled on ${
+        req.body.day
+      } period ${req.body.period}
+               at ${req.body.startTime}${
+        req.body.period == 7 || req.body.period == 8 ? "PM" : "AM"
+      } to the class ${req.body.class} has been cancelled by ${req.body.teacher}
+                due to an unavoidable reason.</p>`,
+    };
 
-  //   const result = await transport.sendMail(mailOptions);
-  //   console.log(result);
-  //   return result;
-  // } catch (error) {
-  //   console.log(error.message);
-  //   return error;
-  // }
+    const result = await transport.sendMail(mailOptions);
+    console.log(result);
+    return result;
+  } catch (error) {
+    console.log(error.message);
+    return error;
+  }
 };
